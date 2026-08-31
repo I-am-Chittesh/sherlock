@@ -7,12 +7,27 @@ import { VueFlow } from '@vue-flow/core';
 const caseData = ref(null);
 const nodes = ref([]);
 const edges = ref([]);
+const newTheoryName = ref('');
 
 // Modal State
 const showEvModal = ref(false);
 const evName = ref('');
 const evWeight = ref(5);
 const evParent = ref('');
+
+const submitTheory = async () => {
+  if (!newTheoryName.value) return;
+  
+  // Assuming your backend expects a POST to create a hypothesis
+  await api.createHypothesis({
+    case_id: store.activeCaseId,
+    theory_name: newTheoryName.value,
+    score: 0
+  }, store.currentRole);
+  
+  newTheoryName.value = '';
+  loadWarRoom(); // Instantly refresh the math engine
+};
 
 const loadWarRoom = async () => {
   if (!store.activeCaseId) return;
