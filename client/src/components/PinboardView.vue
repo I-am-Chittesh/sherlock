@@ -7,7 +7,6 @@ import { VueFlow } from '@vue-flow/core';
 const caseData = ref(null);
 const nodes = ref([]);
 const edges = ref([]);
-const newTheoryName = ref('');
 
 // Modal State
 const showEvModal = ref(false);
@@ -15,19 +14,8 @@ const evName = ref('');
 const evWeight = ref(5);
 const evParent = ref('');
 
-const submitTheory = async () => {
-  if (!newTheoryName.value) return;
-  
-  // Assuming your backend expects a POST to create a hypothesis
-  await api.createHypothesis({
-    case_id: store.activeCaseId,
-    theory_name: newTheoryName.value,
-    score: 0
-  }, store.currentRole);
-  
-  newTheoryName.value = '';
-  loadWarRoom(); // Instantly refresh the math engine
-};
+// Theory Injection State
+const newTheoryName = ref('');
 
 const loadWarRoom = async () => {
   if (!store.activeCaseId) return;
@@ -46,7 +34,6 @@ const loadWarRoom = async () => {
 
       return {
         id: ev.id,
-        // Store raw data in node for the click handler
         data: { ...ev }, 
         label: `${ev.name}\n[${ev.status}]`,
         position: { x: 150 + (index % 3) * 250, y: 100 + Math.floor(index / 3) * 150 },
@@ -72,9 +59,8 @@ const loadWarRoom = async () => {
   }
 };
 
-// Cycle Status: PENDING -> VERIFIED -> DEBUNKED -> PENDING
 const handleNodeClick = async (event) => {
-  if (store.currentRole !== 'INVESTIGATOR') return; // Admins can't edit
+  if (store.currentRole !== 'INVESTIGATOR') return; 
   
   const node = event.node.data;
   let nextStatus = 'PENDING';
@@ -82,7 +68,7 @@ const handleNodeClick = async (event) => {
   else if (node.status === 'VERIFIED') nextStatus = 'DEBUNKED';
 
   await api.updateEvidenceStatus(node.id, nextStatus, store.currentRole);
-  loadWarRoom(); // Rehydrate canvas and math engine instantly
+  loadWarRoom(); 
 };
 
 const submitEvidence = async () => {
@@ -99,6 +85,18 @@ const submitEvidence = async () => {
   evParent.value = '';
   showEvModal.value = false;
   loadWarRoom();
+};
+
+const submitTheory = async () => {
+  if (!newTheoryName.value) return;
+  await api.createHypothesis({
+    case_id: store.activeCaseId,
+    theory_name: newTheoryName.value,
+    score: 0
+  }, store.currentRole);
+  
+  newTheoryName.value = '';
+  loadWarRoom(); 
 };
 
 const handlePlusEvent = () => { 
@@ -132,54 +130,59 @@ onUnmounted(() => {
       />
     </div>
 
-    <!-- Right Hemisphere: Hypothesis Math Engine -->
-    <div class="col-span-4 h-full flex flex-col bg-[#0f0f0f] p-10 overflow-y-auto pb-40 text-neutral-300">
-      <h2 class="text-3xl font-extrabold tracking-tighter lowercase text-white mb-2" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;">
-        {{ caseData?.title || 'loading...' }}
-      </h2>
-      <p class="text-xs text-neutral-500 lowercase font-mono mb-10">{{ caseData?.description }}</p>
+    <!-- Right Hemisphere: Partitioned Flex Layout -->
+    <div class="col-span-4 h-full flex flex-col bg-[#0f0f0f] text-neutral-300">
       
-      <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-600 mb-6 border-b border-neutral-800 pb-2">Probability Engine</h3>
-      
-      <div class="space-y-6">
-        <div v-for="hyp in caseData?.hypotheses" :key="hyp.id" class="bg-[#141414] border border-neutral-800 p-6">
-          <div class="flex justify-between items-end mb-4">
-            <span class="text-sm font-bold lowercase w-3/4 tracking-tight">{{ hyp.theory_name }}</span>
-            <span class="font-mono text-xl font-bold" :class="{'text-emerald-500': hyp.score > 50, 'text-[#F40009]': hyp.score === 0, 'text-white': hyp.score > 0 && hyp.score <= 50}">
-              {{ hyp.score }}%
-            </span>
-          </div>
-          
-          <div class="w-full bg-[#0a0a0a] h-1 overflow-hidden border border-neutral-800">
-            <div 
-              class="h-full transition-all duration-700 ease-out" 
-              :class="hyp.score > 50 ? 'bg-emerald-600' : (hyp.score === 0 ? 'bg-[#F40009]' : 'bg-neutral-500')"
-              :style="{ width: `${hyp.score}%` }"
-            ></div>
+      <!-- Top Partition: Scrollable Details & Engine -->
+      <div class="flex-1 overflow-y-auto p-10 pb-10">
+        <h2 class="text-3xl font-extrabold tracking-tighter lowercase text-white mb-2" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;">
+          {{ caseData?.title || 'loading...' }}
+        </h2>
+        <p class="text-xs text-neutral-500 lowercase font-mono mb-10">{{ caseData?.description }}</p>
+        
+        <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-600 mb-6 border-b border-neutral-800 pb-2">Probability Engine</h3>
+        
+        <div class="space-y-6">
+          <div v-for="hyp in caseData?.hypotheses" :key="hyp.id" class="bg-[#141414] border border-neutral-800 p-6">
+            <div class="flex justify-between items-end mb-4">
+              <span class="text-sm font-bold lowercase w-3/4 tracking-tight">{{ hyp.theory_name }}</span>
+              <span class="font-mono text-xl font-bold" :class="{'text-emerald-500': hyp.score > 50, 'text-[#F40009]': hyp.score === 0, 'text-white': hyp.score > 0 && hyp.score <= 50}">
+                {{ hyp.score }}%
+              </span>
+            </div>
+            
+            <div class="w-full bg-[#0a0a0a] h-1 overflow-hidden border border-neutral-800">
+              <div 
+                class="h-full transition-all duration-700 ease-out" 
+                :class="hyp.score > 50 ? 'bg-emerald-600' : (hyp.score === 0 ? 'bg-[#F40009]' : 'bg-neutral-500')"
+                :style="{ width: `${hyp.score}%` }"
+              ></div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- New Theory Injector -->
-      <div class="mt-auto pt-8 border-t border-neutral-800">
-        <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-600 mb-4 block">Inject New Theory</span>
-        <div class="flex gap-0">
+      <!-- Bottom Partition: Fixed Theory Injector -->
+      <div class="flex-none p-8 border-t border-neutral-800 bg-[#0a0a0a] pb-32">
+        <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-500 mb-4 block">Inject New Theory</span>
+        <div class="flex gap-0 border border-neutral-800">
           <input 
             v-model="newTheoryName" 
             type="text" 
             placeholder="e.g. insider syndicate..." 
-            class="flex-1 bg-[#0a0a0a] border border-neutral-800 border-r-0 px-4 py-3 text-xs outline-none lowercase focus:border-neutral-500 text-white placeholder:text-neutral-700"
+            class="flex-1 bg-[#0f0f0f] px-4 py-3 text-xs outline-none lowercase focus:bg-[#141414] text-white placeholder:text-neutral-700 transition-colors"
             @keyup.enter="submitTheory"
           />
           <button 
             @click="submitTheory" 
-            class="px-6 py-3 bg-white text-black text-[10px] uppercase tracking-widest font-bold hover:bg-neutral-300 transition-colors border border-white"
+            class="px-6 py-3 bg-white text-black text-[10px] uppercase tracking-widest font-bold hover:bg-neutral-300 transition-colors border-l border-neutral-800"
           >
             Add
           </button>
         </div>
       </div>
+
+    </div>
 
     <!-- Create Evidence Modal -->
     <div v-if="showEvModal" class="fixed inset-0 bg-[#0a0a0a]/90 flex items-center justify-center z-50">

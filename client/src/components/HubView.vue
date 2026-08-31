@@ -1,6 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { store } from '../store';
 import { api } from '../services/api';
 
@@ -20,6 +19,7 @@ const loadCases = async () => {
     console.error('Failed to load cases:', err);
   }
 };
+
 const paginatedCases = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
   return cases.value.slice(start, start + itemsPerPage);
@@ -59,15 +59,6 @@ onUnmounted(() => {
   window.removeEventListener('taskbar-plus', handlePlusEvent);
   window.removeEventListener('taskbar-left', handleLeftEvent);
   window.removeEventListener('taskbar-right', handleRightEvent);
-});
-
-onMounted(() => {
-  loadCases();
-  window.addEventListener('taskbar-plus', handlePlusEvent);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('taskbar-plus', handlePlusEvent);
 });
 </script>
 
