@@ -161,6 +161,26 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- New Theory Injector -->
+      <div class="mt-auto pt-8 border-t border-neutral-800">
+        <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-600 mb-4 block">Inject New Theory</span>
+        <div class="flex gap-0">
+          <input 
+            v-model="newTheoryName" 
+            type="text" 
+            placeholder="e.g. insider syndicate..." 
+            class="flex-1 bg-[#0a0a0a] border border-neutral-800 border-r-0 px-4 py-3 text-xs outline-none lowercase focus:border-neutral-500 text-white placeholder:text-neutral-700"
+            @keyup.enter="submitTheory"
+          />
+          <button 
+            @click="submitTheory" 
+            class="px-6 py-3 bg-white text-black text-[10px] uppercase tracking-widest font-bold hover:bg-neutral-300 transition-colors border border-white"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
     <!-- Create Evidence Modal -->
     <div v-if="showEvModal" class="fixed inset-0 bg-[#0a0a0a]/90 flex items-center justify-center z-50">
       <div class="bg-[#0f0f0f] border border-neutral-800 p-8 w-[450px]">
