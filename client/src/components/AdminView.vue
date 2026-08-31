@@ -12,13 +12,13 @@ const loadDashboard = async () => {
     stats.value = data.stats || stats.value;
     auditLogs.value = data.auditLogs || [];
   } catch (err) {
-    console.error('[TERMINAL ERROR] Could not fetch overseer data', err);
+    console.error('Terminal Error:', err);
   }
 };
 
 onMounted(() => {
   loadDashboard();
-  // Auto-refresh the logs every 5 seconds for the live terminal feed
+  // Poll the database every 5 seconds for a live-updating overseer feel
   pollingInterval = setInterval(loadDashboard, 5000);
 });
 
@@ -28,61 +28,65 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="w-full h-full flex flex-col p-10 bg-[#0a0a0a] overflow-y-auto pb-32">
+  <div class="w-full h-full flex flex-col bg-[#0a0a0a] text-neutral-300 p-10 overflow-y-auto pb-40 selection:bg-[#F40009] selection:text-white">
     
-    <!-- Dashboard Header -->
-    <div class="mb-8 border-b border-neutral-800 pb-4">
-      <h1 class="text-3xl font-extrabold tracking-widest uppercase text-white">System Overseer</h1>
-      <p class="text-xs font-mono text-neutral-500 uppercase mt-1">Live Telemetry & Audit Matrix</p>
+    <!-- Top Navigation Row -->
+    <div class="flex justify-between items-start w-full border-b border-neutral-800 pb-8 mb-10">
+      <h1 class="text-4xl font-extrabold tracking-tighter lowercase text-white" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;">
+        control room.
+      </h1>
+      
+      <div class="text-right flex flex-col items-end">
+        <span class="text-2xl font-extrabold tracking-tighter leading-none text-white lowercase" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;">
+          admin<br>overseer
+        </span>
+        <span class="text-[10px] font-mono text-[#F40009] mt-2">*restricted access*</span>
+      </div>
     </div>
 
     <!-- KPI Telemetry Blocks -->
     <div class="grid grid-cols-3 gap-6 mb-10">
-      <div class="border border-neutral-800 bg-[#141414] p-6 rounded-lg relative overflow-hidden group hover:border-neutral-600 transition">
-        <div class="absolute top-0 left-0 w-1 h-full bg-blue-600"></div>
-        <span class="text-xs font-mono uppercase tracking-widest text-neutral-500">Active Cases</span>
-        <div class="text-5xl font-bold mt-2 text-white">{{ stats.totalCases }}</div>
+      <div class="border border-neutral-800 bg-[#0f0f0f] p-8 flex flex-col">
+        <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-500 mb-6 block">Active Cases</span>
+        <div class="text-6xl font-extrabold tracking-tighter text-white" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;">{{ stats.totalCases }}</div>
       </div>
       
-      <div class="border border-neutral-800 bg-[#141414] p-6 rounded-lg relative overflow-hidden group hover:border-neutral-600 transition">
-        <div class="absolute top-0 left-0 w-1 h-full bg-emerald-600"></div>
-        <span class="text-xs font-mono uppercase tracking-widest text-neutral-500">Evidence Nodes</span>
-        <div class="text-5xl font-bold mt-2 text-white">{{ stats.totalEvidence }}</div>
+      <div class="border border-neutral-800 bg-[#0f0f0f] p-8 flex flex-col">
+        <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-500 mb-6 block">Evidence Nodes</span>
+        <div class="text-6xl font-extrabold tracking-tighter text-white" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;">{{ stats.totalEvidence }}</div>
       </div>
       
-      <div class="border border-neutral-800 bg-[#141414] p-6 rounded-lg relative overflow-hidden group hover:border-neutral-600 transition">
-        <div class="absolute top-0 left-0 w-1 h-full bg-purple-600"></div>
-        <span class="text-xs font-mono uppercase tracking-widest text-neutral-500">System Users</span>
-        <div class="text-5xl font-bold mt-2 text-white">{{ stats.totalUsers }}</div>
+      <div class="border border-neutral-800 bg-[#0f0f0f] p-8 flex flex-col">
+        <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-500 mb-6 block">System Users</span>
+        <div class="text-6xl font-extrabold tracking-tighter text-white" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;">{{ stats.totalUsers }}</div>
       </div>
     </div>
 
-    <!-- Immutable Audit Terminal -->
-    <div class="flex-grow border border-neutral-800 bg-[#0d0d0d] rounded-lg flex flex-col overflow-hidden shadow-2xl">
-      <!-- Mac-style Terminal Header -->
-      <div class="bg-neutral-900 border-b border-neutral-800 px-4 py-2 flex items-center gap-2">
-        <div class="w-3 h-3 rounded-full bg-red-500"></div>
-        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-        <div class="w-3 h-3 rounded-full bg-green-500"></div>
-        <span class="ml-4 text-xs font-mono text-neutral-500">root@sherlock-audit-server:~# tail -f /var/log/audit.log</span>
+    <!-- Immutable Audit Log -->
+    <div class="flex-grow border border-neutral-800 bg-[#0f0f0f] flex flex-col overflow-hidden">
+      <!-- Matrix Header -->
+      <div class="border-b border-neutral-800 px-6 py-4 flex items-center justify-between bg-[#0a0a0a]">
+        <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-500">Live Telemetry & Audit Matrix</span>
+        <span class="text-[10px] font-mono text-[#F40009] flex items-center gap-2">
+          <span class="w-2 h-2 bg-[#F40009] rounded-full animate-pulse"></span> REC
+        </span>
       </div>
       
       <!-- Scrolling Log Feed -->
-      <div class="p-6 overflow-y-auto space-y-3">
-        <div v-if="auditLogs.length === 0" class="text-neutral-600 font-mono text-sm">
-          > No system modifications detected...
+      <div class="p-6 overflow-y-auto space-y-2 flex-grow">
+        <div v-if="auditLogs.length === 0" class="text-neutral-600 font-mono text-xs lowercase">
+          waiting for mutations...
         </div>
         
         <div 
           v-for="log in auditLogs" 
           :key="log.id" 
-          class="font-mono text-sm flex gap-4 hover:bg-neutral-900/50 p-1 rounded transition"
+          class="font-mono text-xs flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-[#141414] p-3 transition-colors border-l-2 border-transparent hover:border-neutral-500"
         >
-          <span class="text-neutral-500 min-w-[180px]">[{{ new Date(log.timestamp).toLocaleString() }}]</span>
-          <span class="text-[#F40009] font-bold min-w-[120px]">{{ log.role }}</span>
-          <span class="text-emerald-400">►</span>
-          <span class="text-neutral-300">{{ log.action }}</span>
-          <span v-if="log.target_id" class="text-neutral-600 ml-auto text-xs truncate max-w-[100px]">ID: {{ log.target_id }}</span>
+          <span class="text-neutral-600 min-w-[150px]">{{ new Date(log.timestamp).toLocaleString() }}</span>
+          <span class="text-white font-bold min-w-[100px] uppercase tracking-widest text-[10px]">{{ log.role }}</span>
+          <span class="text-neutral-400 flex-grow lowercase">{{ log.action }}</span>
+          <span v-if="log.target_id" class="text-neutral-600 text-[10px] truncate max-w-[120px]">id: {{ log.target_id }}</span>
         </div>
       </div>
     </div>
