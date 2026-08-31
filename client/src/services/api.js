@@ -1,4 +1,5 @@
-const BASE_URL = 'http://localhost:3000/api'; // Ensure this matches your Express port
+// Automatically uses the relative Vercel path in production, or localhost in development
+const BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost:3000/api';
 
 const request = async (endpoint, options = {}) => {
   const response = await fetch(`${BASE_URL}${endpoint}`, {
@@ -18,7 +19,6 @@ const request = async (endpoint, options = {}) => {
 };
 
 export const api = {
-  // Hub
   getCases: (status = '') => {
     const query = status ? `?status=${status}` : '';
     return request(`/cases${query}`);
@@ -29,32 +29,25 @@ export const api = {
       body: JSON.stringify(data),
       headers: { 'x-user-role': role }
     }),
-
-  // War Room / Pinboard
   getWarRoom: (caseId) => 
     request(`/cases/${caseId}/war-room`),
-    
   createEvidence: (data, role) => 
     request('/evidence', { 
       method: 'POST', 
       body: JSON.stringify(data),
       headers: { 'x-user-role': role }
     }),
-    
   updateEvidenceStatus: (id, status, role) => 
     request(`/evidence/${id}/status`, { 
       method: 'PUT', 
       body: JSON.stringify({ status }),
       headers: { 'x-user-role': role }
     }),
-
   createHypothesis: (data, role) => 
     request('/hypotheses', { 
       method: 'POST', 
       body: JSON.stringify(data),
       headers: { 'x-user-role': role }
     }),
-
-  // Admin Overseer
   getAdminDashboard: () => request('/admin/dashboard')
 };
