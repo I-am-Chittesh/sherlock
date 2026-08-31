@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { store } from '../store';
 import { api } from '../services/api';
 import { VueFlow } from '@vue-flow/core';
@@ -8,54 +8,48 @@ const caseData = ref(null);
 const nodes = ref([]);
 const edges = ref([]);
 
+// Modal State
+const showEvModal = ref(false);
+const evName = ref('');
+const evWeight = ref(5);
+const evParent = ref('');
+
 const loadWarRoom = async () => {
   if (!store.activeCaseId) return;
   try {
     const data = await api.getWarRoom(store.activeCaseId);
     caseData.value = data;
 
-    // 1. Map Evidence to Canvas Nodes
     nodes.value = (data.evidence || []).map((ev, index) => {
-      // Dynamic node coloring
-      let bg = '#171717'; // PENDING
+      let bg = '#171717';
       let border = '#404040';
-      
       if (ev.status === 'VERIFIED') {
-        bg = '#064e3b';
-        border = '#10b981';
+        bg = '#064e3b'; border = '#10b981';
       } else if (ev.status === 'DEBUNKED') {
-        bg = '#450a0a';
-        border = '#F40009'; // Diet Coke red aesthetic 
+        bg = '#450a0a'; border = '#F40009'; 
       }
 
       return {
         id: ev.id,
+        // Store raw data in node for the click handler
+        data: { ...ev }, 
         label: `${ev.name}\n[${ev.status}]`,
         position: { x: 150 + (index % 3) * 250, y: 100 + Math.floor(index / 3) * 150 },
         style: {
-          background: bg,
-          color: '#ffffff',
-          border: `2px solid ${border}`,
-          borderRadius: '8px',
-          padding: '12px',
-          width: '180px',
-          textAlign: 'center',
-          fontSize: '12px',
-          fontWeight: 'bold',
-          boxShadow: `0 0 15px ${border}40`
+          background: bg, color: '#ffffff', border: `2px solid ${border}`,
+          borderRadius: '0px', padding: '12px', width: '180px',
+          textAlign: 'center', fontSize: '10px', fontWeight: 'bold',
+          textTransform: 'lowercase', fontFamily: 'monospace'
         }
       };
     });
 
-    // 2. Map Parent-Child Relationships to Canvas Edges
     edges.value = (data.evidence || [])
       .filter(ev => ev.parent_id)
       .map(ev => ({
         id: `edge-${ev.parent_id}-${ev.id}`,
-        source: ev.parent_id,
-        target: ev.id,
-        animated: true,
-        style: { stroke: '#a3a3a3', strokeWidth: 2 }
+        source: ev.parent_id, target: ev.id,
+        animated: true, style: { stroke: '#404040', strokeWidth: 2 }
       }));
 
   } catch (err) {
@@ -63,16 +57,54 @@ const loadWarRoom = async () => {
   }
 };
 
+// Cycle Status: PENDING -> VERIFIED -> DEBUNKED -> PENDING
+const handleNodeClick = async (event) => {
+  if (store.currentRole !== 'INVESTIGATOR') return; // Admins can't edit
+  
+  const node = event.node.data;
+  let nextStatus = 'PENDING';
+  if (node.status === 'PENDING') nextStatus = 'VERIFIED';
+  else if (node.status === 'VERIFIED') nextStatus = 'DEBUNKED';
+
+  await api.updateEvidenceStatus(node.id, nextStatus, store.currentRole);
+  loadWarRoom(); // Rehydrate canvas and math engine instantly
+};
+
+const submitEvidence = async () => {
+  if (!evName.value) return;
+  await api.createEvidence({
+    case_id: store.activeCaseId,
+    name: evName.value,
+    weight: evWeight.value,
+    parent_id: evParent.value || null
+  }, store.currentRole);
+  
+  evName.value = '';
+  evWeight.value = 5;
+  evParent.value = '';
+  showEvModal.value = false;
+  loadWarRoom();
+};
+
+const handlePlusEvent = () => { 
+  if (store.currentScreen === 'pinboard') showEvModal.value = true; 
+};
+
 onMounted(() => {
   loadWarRoom();
+  window.addEventListener('taskbar-plus', handlePlusEvent);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('taskbar-plus', handlePlusEvent);
 });
 </script>
 
 <template>
-  <div class="w-full h-full grid grid-cols-12 overflow-hidden">
+  <div class="w-full h-full grid grid-cols-12 overflow-hidden bg-[#0a0a0a]">
     
     <!-- Left Hemisphere: Interactive Evidence Canvas -->
-    <div class="col-span-8 h-full border-r border-neutral-800 bg-[#0a0a0a] relative">
+    <div class="col-span-8 h-full border-r border-neutral-800 relative">
       <VueFlow 
         :nodes="nodes" 
         :edges="edges" 
@@ -80,38 +112,64 @@ onMounted(() => {
         :min-zoom="0.2" 
         :max-zoom="4"
         fit-view-on-init
+        @node-click="handleNodeClick"
         class="w-full h-full"
       />
     </div>
 
     <!-- Right Hemisphere: Hypothesis Math Engine -->
-    <div class="col-span-4 h-full flex flex-col bg-[#141414] p-8 overflow-y-auto pb-32">
-      <h2 class="text-2xl font-bold mb-2">{{ caseData?.title || 'Loading Case Data...' }}</h2>
-      <p class="text-sm text-neutral-400 mb-8">{{ caseData?.description }}</p>
+    <div class="col-span-4 h-full flex flex-col bg-[#0f0f0f] p-10 overflow-y-auto pb-40 text-neutral-300">
+      <h2 class="text-3xl font-extrabold tracking-tighter lowercase text-white mb-2" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;">
+        {{ caseData?.title || 'loading...' }}
+      </h2>
+      <p class="text-xs text-neutral-500 lowercase font-mono mb-10">{{ caseData?.description }}</p>
       
-      <!-- Live Probability Bars -->
-      <h3 class="text-xs font-mono uppercase tracking-wider text-neutral-500 mb-4">Probability Engine</h3>
+      <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-600 mb-6 border-b border-neutral-800 pb-2">Probability Engine</h3>
       
       <div class="space-y-6">
-        <div v-for="hyp in caseData?.hypotheses" :key="hyp.id" class="bg-neutral-900 border border-neutral-800 p-5 rounded-xl">
-          <div class="flex justify-between items-end mb-3">
-            <span class="text-sm font-bold w-3/4">{{ hyp.theory_name }}</span>
-            <span class="font-mono text-lg font-bold" :class="{'text-green-500': hyp.score > 50, 'text-[#F40009]': hyp.score === 0}">
+        <div v-for="hyp in caseData?.hypotheses" :key="hyp.id" class="bg-[#141414] border border-neutral-800 p-6">
+          <div class="flex justify-between items-end mb-4">
+            <span class="text-sm font-bold lowercase w-3/4 tracking-tight">{{ hyp.theory_name }}</span>
+            <span class="font-mono text-xl font-bold" :class="{'text-emerald-500': hyp.score > 50, 'text-[#F40009]': hyp.score === 0, 'text-white': hyp.score > 0 && hyp.score <= 50}">
               {{ hyp.score }}%
             </span>
           </div>
           
-          <!-- Progress Track -->
-          <div class="w-full bg-neutral-950 h-3 rounded-full overflow-hidden border border-neutral-800 shadow-inner">
+          <div class="w-full bg-[#0a0a0a] h-1 overflow-hidden border border-neutral-800">
             <div 
               class="h-full transition-all duration-700 ease-out" 
-              :class="hyp.score > 50 ? 'bg-green-600' : 'bg-[#F40009]'"
+              :class="hyp.score > 50 ? 'bg-emerald-600' : (hyp.score === 0 ? 'bg-[#F40009]' : 'bg-neutral-500')"
               :style="{ width: `${hyp.score}%` }"
             ></div>
           </div>
         </div>
       </div>
+    </div>
 
+    <!-- Create Evidence Modal -->
+    <div v-if="showEvModal" class="fixed inset-0 bg-[#0a0a0a]/90 flex items-center justify-center z-50">
+      <div class="bg-[#0f0f0f] border border-neutral-800 p-8 w-[450px]">
+        <h3 class="text-2xl font-bold lowercase mb-6 tracking-tight text-white" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;">inject node.</h3>
+        
+        <input v-model="evName" type="text" placeholder="evidence name" class="w-full bg-[#0a0a0a] border border-neutral-800 p-3 mb-4 text-sm outline-none lowercase focus:border-neutral-500 text-white" />
+        
+        <div class="flex justify-between items-center mb-4 border border-neutral-800 bg-[#0a0a0a] p-3">
+          <span class="text-xs font-mono text-neutral-500 uppercase tracking-widest">Weight (1-10)</span>
+          <input v-model="evWeight" type="number" min="1" max="10" class="bg-transparent text-right outline-none text-white font-mono w-12" />
+        </div>
+
+        <select v-model="evParent" class="w-full bg-[#0a0a0a] border border-neutral-800 p-3 mb-6 text-sm outline-none lowercase text-neutral-400 focus:border-neutral-500">
+          <option value="">No Parent (Root Node)</option>
+          <option v-for="node in caseData?.evidence" :key="node.id" :value="node.id">
+            Link to: {{ node.name }}
+          </option>
+        </select>
+
+        <div class="flex justify-end gap-4">
+          <button @click="showEvModal = false" class="text-xs uppercase tracking-widest text-neutral-500 hover:text-white transition-colors">Cancel</button>
+          <button @click="submitEvidence" class="px-6 py-2 bg-white text-black text-xs uppercase tracking-widest font-bold hover:bg-neutral-300 transition-colors">Inject</button>
+        </div>
+      </div>
     </div>
 
   </div>
