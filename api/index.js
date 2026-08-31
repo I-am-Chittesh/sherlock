@@ -11,6 +11,12 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+const auditLogger = require('./middleware/audit');
+const casesRouter = require('./routes/cases');
+
+// Mount routes and inject the automated audit logger
+app.use('/api/cases', auditLogger, casesRouter);
+
 // Health Check Route
 app.get('/api/health', async (req, res) => {
   try {
