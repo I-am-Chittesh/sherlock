@@ -1,65 +1,60 @@
-const API_BASE = '/api';
+const BASE_URL = 'http://localhost:3000/api'; // Ensure this matches your Express port
 
-// Helper to grab role headers for audit tracking
-const getHeaders = (role) => ({
-  'Content-Type': 'application/json',
-  'x-user-role': role || 'INVESTIGATOR'
-});
+const request = async (endpoint, options = {}) => {
+  const response = await fetch(`${BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'API Request Failed');
+  }
+
+  return response.json();
+};
 
 export const api = {
-  // Cases
-  getCases: async (status) => {
-    const url = status ? `${API_BASE}/cases?status=${status}` : `${API_BASE}/cases`;
-    const res = await fetch(url);
-    return res.json();
+  // Hub
+  getCases: (status = '') => {
+    const query = status ? `?status=${status}` : '';
+    return request(`/cases${query}`);
   },
+  createCase: (data, role) => 
+    request('/cases', { 
+      method: 'POST', 
+      body: JSON.stringify(data),
+      headers: { 'x-user-role': role }
+    }),
 
-  createCase: async (data, role) => {
-    const res = await fetch(`${API_BASE}/cases`, {
-      method: 'POST',
-      headers: getHeaders(role),
-      body: JSON.stringify(data)
-    });
-    return res.json();
-  },
+  // War Room / Pinboard
+  getWarRoom: (caseId) => 
+    request(`/cases/${caseId}/war-room`),
+    
+  createEvidence: (data, role) => 
+    request('/evidence', { 
+      method: 'POST', 
+      body: JSON.stringify(data),
+      headers: { 'x-user-role': role }
+    }),
+    
+  updateEvidenceStatus: (id, status, role) => 
+    request(`/evidence/${id}/status`, { 
+      method: 'PUT', 
+      body: JSON.stringify({ status }),
+      headers: { 'x-user-role': role }
+    }),
 
-  getWarRoom: async (caseId) => {
-    const res = await fetch(`${API_BASE}/cases/${caseId}/war-room`);
-    return res.json();
-  },
+  createHypothesis: (data, role) => 
+    request('/hypotheses', { 
+      method: 'POST', 
+      body: JSON.stringify(data),
+      headers: { 'x-user-role': role }
+    }),
 
-  // Evidence & Dynamic Scoring
-  createEvidence: async (data, role) => {
-    const res = await fetch(`${API_BASE}/evidence`, {
-      method: 'POST',
-      headers: getHeaders(role),
-      body: JSON.stringify(data)
-    });
-    return res.json();
-  },
-
-  updateEvidenceStatus: async (id, status, role) => {
-    const res = await fetch(`${API_BASE}/evidence/${id}/status`, {
-      method: 'PUT',
-      headers: getHeaders(role),
-      body: JSON.stringify({ status })
-    });
-    return res.json();
-  },
-
-  // Hypotheses
-  createHypothesis: async (data, role) => {
-    const res = await fetch(`${API_BASE}/hypotheses`, {
-      method: 'POST',
-      headers: getHeaders(role),
-      body: JSON.stringify(data)
-    });
-    return res.json();
-  },
-
-  // Admin Overview & Audit Logs
-  getAdminDashboard: async () => {
-    const res = await fetch(`${API_BASE}/admin/dashboard`);
-    return res.json();
-  }
+  // Admin Overseer
+  getAdminDashboard: () => request('/admin/dashboard')
 };

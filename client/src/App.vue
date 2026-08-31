@@ -12,15 +12,13 @@ const handleOpenModal = () => window.dispatchEvent(new CustomEvent('taskbar-plus
 </script>
 
 <template>
-  <main class="w-screen h-screen overflow-hidden bg-[#0a0a0a] text-white relative">
+  <main class="w-screen h-screen overflow-hidden bg-[#0a0a0a] text-white relative font-sans">
     
-    <!-- Screen Router -->
     <ConsoleView v-if="store.currentScreen === 'console'" />
     <HubView v-if="store.currentScreen === 'hub'" />
     <PinboardView v-if="store.currentScreen === 'pinboard'" />
     <AdminView v-if="store.currentScreen === 'admin'" />
 
-    <!-- Persistent Taskbar -->
     <Taskbar 
       v-if="store.currentScreen !== 'console'" 
       @paginate-left="handlePaginateLeft"
