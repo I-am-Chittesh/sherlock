@@ -1,4 +1,5 @@
 <script setup>
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { ref, onMounted, onUnmounted } from 'vue';
 import { store } from '../store';
 import { api } from '../services/api';
@@ -8,6 +9,8 @@ const searchQuery = ref('');
 const showModal = ref(false);
 const newCaseTitle = ref('');
 const newCaseDesc = ref('');
+const currentPage = ref(1);
+const itemsPerPage = 8;
 
 const loadCases = async () => {
   try {
@@ -16,6 +19,18 @@ const loadCases = async () => {
   } catch (err) {
     console.error('Failed to load cases:', err);
   }
+};
+const paginatedCases = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  return cases.value.slice(start, start + itemsPerPage);
+});
+
+// Arrow Event Handlers
+const handleLeftEvent = () => {
+  if (currentPage.value > 1) currentPage.value--;
+};
+const handleRightEvent = () => {
+  if (currentPage.value * itemsPerPage < cases.value.length) currentPage.value++;
 };
 
 const openCase = (id) => {
@@ -32,6 +47,19 @@ const submitCase = async () => {
 };
 
 const handlePlusEvent = () => { showModal.value = true; };
+
+onMounted(() => {
+  loadCases();
+  window.addEventListener('taskbar-plus', handlePlusEvent);
+  window.addEventListener('taskbar-left', handleLeftEvent);
+  window.addEventListener('taskbar-right', handleRightEvent);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('taskbar-plus', handlePlusEvent);
+  window.removeEventListener('taskbar-left', handleLeftEvent);
+  window.removeEventListener('taskbar-right', handleRightEvent);
+});
 
 onMounted(() => {
   loadCases();
@@ -74,7 +102,7 @@ onUnmounted(() => {
     <!-- Tall Case Cards Grid -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
       <div 
-        v-for="c in cases" 
+        v-for="c in paginatedCases" 
         :key="c.id"
         @click="openCase(c.id)"
         class="border border-neutral-800 bg-[#0f0f0f] p-6 cursor-pointer hover:bg-[#171717] transition-colors flex flex-col justify-between h-72 group"
