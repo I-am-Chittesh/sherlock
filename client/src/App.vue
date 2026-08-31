@@ -1,22 +1,14 @@
 <script setup>
-import { store } from './store';
+import { store } from './store.js';
 import ConsoleView from './components/ConsoleView.vue';
 import HubView from './components/HubView.vue';
 import PinboardView from './components/PinboardView.vue';
 import AdminView from './components/AdminView.vue';
 import Taskbar from './components/Taskbar.vue';
 
-const handlePaginateLeft = () => {
-  window.dispatchEvent(new CustomEvent('taskbar-left'));
-};
-
-const handlePaginateRight = () => {
-  window.dispatchEvent(new CustomEvent('taskbar-right'));
-};
-
-const handleOpenModal = () => {
-  window.dispatchEvent(new CustomEvent('taskbar-plus'));
-};
+const handlePaginateLeft = () => window.dispatchEvent(new CustomEvent('taskbar-left'));
+const handlePaginateRight = () => window.dispatchEvent(new CustomEvent('taskbar-right'));
+const handleOpenModal = () => window.dispatchEvent(new CustomEvent('taskbar-plus'));
 </script>
 
 <template>
@@ -28,7 +20,7 @@ const handleOpenModal = () => {
     <PinboardView v-if="store.currentScreen === 'pinboard'" />
     <AdminView v-if="store.currentScreen === 'admin'" />
 
-    <!-- Persistent Floating Pill Taskbar -->
+    <!-- Persistent Taskbar -->
     <Taskbar 
       v-if="store.currentScreen !== 'console'" 
       @paginate-left="handlePaginateLeft"
