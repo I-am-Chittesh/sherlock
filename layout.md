@@ -17,8 +17,6 @@
 * **Audit_Logs:** `timestamp`, `user_role`, `action_type`, `target_id` (Automatically generated via Express middleware for every mutation).
 
 ## Global UI & Navigation System
-
-**Aesthetic:** Deep black backgrounds, dark-gray panels, stark white text. System alerts and "Debunked" nodes use an aggressive crimson red, while "Verified" nodes use sharp neon green.
 **The Dynamic Taskbar:** A persistent, pill-shaped dock anchored at the bottom of the screen.
 
 | Screen Context | Outer Edge Arrows | Center "+" Button Action | Visibility |
